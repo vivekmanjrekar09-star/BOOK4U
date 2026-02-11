@@ -169,6 +169,7 @@ app.post('/api/login', async (req, res) => {
             });
         }
 
+        
         // Check password
         const hashedPassword = hashPassword(password);
         if (user.password !== hashedPassword) {

@@ -431,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
     // Home Page Category Click Listener
     if (homeCategoryItems.length > 0) {
         homeCategoryItems.forEach(item => {
