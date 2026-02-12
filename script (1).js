@@ -431,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
     // Home Page Category Click Listener
     if (homeCategoryItems.length > 0) {
         homeCategoryItems.forEach(item => {
@@ -608,4 +609,87 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartDisplay();
     // Also check checkout button status initially
     checkCheckoutStatus();
+// ========================================
+    // CHATBOT LOGIC
+    // ========================================
+    // NOTE: Ensure your HTML input tag has id="user-input"
+    const chatInput = document.getElementById('user-input') || document.querySelector('#chat-widget input');
+    const chatMessages = document.getElementById('chat-messages');
+    // Select the arrow button next to the input
+    const sendBtn = document.querySelector('#chat-widget button:not([onclick])');
+
+    // Function to add messages to the screen
+    function appendMessage(sender, text) {
+        const isBot = sender === 'Bot';
+        const align = isBot ? 'flex-start' : 'flex-end';
+        const bg = isBot ? 'white' : '#667eea'; // Purple for User, White for Bot
+        const color = isBot ? '#333' : 'white';
+        const radius = isBot ? '0 15px 15px 15px' : '15px 15px 0 15px';
+        const icon = isBot ? '<div style="font-size: 24px;">🤖</div>' : '';
+
+        // Create the message HTML
+        const msgHTML = `
+            <div style="display: flex; gap: 10px; justify-content: ${align}; margin-bottom: 10px;">
+                ${icon}
+                <div style="background: ${bg}; padding: 12px 16px; border-radius: ${radius}; box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: ${color}; font-size: 14px; line-height: 1.5; max-width: 80%;">
+                    ${text}
+                </div>
+            </div>
+        `;
+        
+        chatMessages.insertAdjacentHTML('beforeend', msgHTML);
+        chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll to bottom
+    }
+
+    // Main function to send the message
+    async function handleChat() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        // 1. Show User Message
+        appendMessage('User', message);
+        chatInput.value = '';
+
+        // 2. Show "Thinking..."
+        const loadingId = 'loading-' + Date.now();
+        const loadingHTML = `<div id="${loadingId}" style="margin-left: 45px; font-style: italic; color: #888; font-size: 12px; margin-bottom: 10px;">Thinking...</div>`;
+        chatMessages.insertAdjacentHTML('beforeend', loadingHTML);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            // 3. Send to Server
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+
+            const data = await response.json();
+
+            // 4. Remove "Thinking..." and Show Reply
+            document.getElementById(loadingId).remove();
+            appendMessage('Bot', data.reply);
+
+        } catch (error) {
+            console.error(error);
+            if(document.getElementById(loadingId)) document.getElementById(loadingId).remove();
+            appendMessage('Bot', "Sorry, I'm having trouble connecting right now.");
+        }
+    }
+
+    // Listen for "Enter" key
+    if (chatInput) {
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleChat();
+        });
+    }
+
+    // Listen for "Send Arrow" click
+    if (sendBtn) {
+        sendBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Stop page reload
+            handleChat();
+        });
+    }
+
 });

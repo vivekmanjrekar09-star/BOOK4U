@@ -1,11 +1,17 @@
+require('dotenv').config(); 
 const express = require('express');
 const { MongoClient } = require('mongodb');
 const path = require('path');
 const fs = require('fs').promises;
 const crypto = require('crypto');
+const Groq = require('groq-sdk');
 
 const app = express();
 const port = 3000;
+// 3. Initialize Groq AI
+const groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY
+});
 
 // MongoDB connection URI
 const uri = 'mongodb://127.0.0.1:27017';
@@ -46,6 +52,27 @@ async function getCollection() {
 })();
 
 // Route to register a new user
+// ==========================================
+//  AI CHATBOT ROUTE
+// ==========================================
+app.post('/chat', async (req, res) => {
+    const userMessage = req.body.message;
+    if (!userMessage) return res.status(400).json({ reply: "Please say something!" });
+
+    try {
+        const completion = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: "You are a helpful assistant for BOOK4U. answer in 2-3 sentences max. be concise and friendly." },
+                { role: "user", content: userMessage }
+            ],
+            model: "llama-3.3-70b-versatile",
+        });
+        res.json({ reply: completion.choices[0]?.message?.content || "I'm not sure." });
+    } catch (error) {
+        console.error("AI Error:", error);
+        res.status(500).json({ reply: "Error connecting to AI." });
+    }
+});
 app.post('/api/register', async (req, res) => {
     try {
         const { fullname, username, email, address, password, confirmPassword } = req.body;
@@ -142,6 +169,7 @@ app.post('/api/login', async (req, res) => {
             });
         }
 
+        
         // Check password
         const hashedPassword = hashPassword(password);
         if (user.password !== hashedPassword) {
@@ -200,7 +228,7 @@ app.post('/api/users', async (req, res) => {
 
 // Default route to serve the main page
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index (1).html'));
+    res.sendFile(path.join(__dirname, 'index(1).html'));
 });
 
 // Start the server
